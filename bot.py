@@ -31,6 +31,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quiz_2": "Тема: Искусство",
         "quiz_3": "Тема: Литература"})
 
+
 async def quiz_button(update, context):
     query = update.callback_query.data
     if query == "quiz_1" or query == "quiz_2" or query == "quiz_3" or query == "quiz_more":
@@ -44,6 +45,7 @@ async def quiz_button(update, context):
         await quiz(update, context)
     elif query == "quiz_start":
         await start(update, context)
+
 
 async def quiz_dialog(update, context):
     text = update.message.text
@@ -72,6 +74,7 @@ async def talk_dialog(update, context):
     answer = await  chat_gpt.add_message(text)
     await  send_text(update, context, answer)
 
+
 async def talk_button(update, context):
     query = update.callback_query.data
     await  update.callback_query.answer()
@@ -95,6 +98,7 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "random_start": "Закончить",
         "random_random": "Хочу ещё факт"})
 
+
 async def random_button(update, context):
     query = update.callback_query.data
     if query == "random_start":
@@ -110,7 +114,7 @@ async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, context, text)
 
 
-async  def gpt_dialog(update, context):
+async def gpt_dialog(update, context):
     text = update.message.text
     promt = load_prompt("gpt")
     answer = await  chat_gpt.send_question(promt, text)
@@ -130,8 +134,8 @@ async def hello(update, context):
         await send_text(update, context, "Привет")
         await send_image(update, context, "avatar_main")
         await send_text_buttons(update, context, "Запустить процесс", {
-            "start":"Запустить",
-            "stop": "Остановить" })
+            "start": "Запустить",
+            "stop": "Остановить"})
 
 
 async def hello_button(update, context):
@@ -144,7 +148,6 @@ async def hello_button(update, context):
 
 dialog = Dialog()
 dialog.mode = None
-
 
 chat_gpt = ChatGptService(token=ChatGPT_TOKEN)
 app = ApplicationBuilder().token(BOT_TOKEN).build()
