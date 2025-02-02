@@ -24,25 +24,45 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "quiz"
-    text = load_message("quiz")
+    text1 = load_message("quiz")
     await send_image(update, context, "quiz")
-    await send_text_buttons(update, context, text, {
+    await send_text_buttons(update, context, text1, {
         "quiz_1": "Тема: История",
         "quiz_2": "Тема: Искусство",
         "quiz_3": "Тема: Литература"})
 
 
+async def quiz_button_button(update, context):
+    dialog.mode = "quiz"
+    text1 = load_message("quiz")
+    await send_image(update, context, "quiz")
+    await send_text_buttons(update, context, text1, {
+        "quiz_11": "Тема: История",
+        "quiz_22": "Тема: Искусство",
+        "quiz_33": "Тема: Литература"})
+
 async def quiz_button(update, context):
     query = update.callback_query.data
-    if query == "quiz_1" or query == "quiz_2" or query == "quiz_3" or query == "quiz_more":
+    print(query)
+    if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
         await  update.callback_query.answer()
         await  send_text(update, context, "Ответь на вопрос: ")
         prompt = load_prompt("quiz")
         chat_gpt.set_prompt(prompt)
         answer = await  chat_gpt.add_message(query)
         await  send_text(update, context, answer)
+    elif query == "quiz_11" or query == "quiz_22" or query == "quiz_33":
+        await  update.callback_query.answer()
+        await  send_text(update, context, "Ответь на вопрос: ")
+        answer = await  chat_gpt.add_message(query)
+        await  send_text(update, context, answer)
+    elif query == "quiz_more":
+        await  update.callback_query.answer()
+        await  send_text(update, context, "Ответь на вопрос: ")
+        answer = await  chat_gpt.add_message(query)
+        await  send_text(update, context, answer)
     elif query == "quiz_new":
-        await quiz(update, context)
+        await quiz_button_button(update, context)
     elif query == "quiz_start":
         await start(update, context)
 
@@ -66,7 +86,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "talk_hawking": "Стивен Хокинг",
         "talk_nietzsche": "Фридрих Ницше",
         "talk_queen": "Королева Елизавета II",
-        "talk_tolkien": "Дж.Р.Р. Толкин"})
+        "talk_tony_stark": "Тони Старк"})
 
 
 async def talk_dialog(update, context):
@@ -92,8 +112,13 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_image(update, context, 'random')
     await send_text(update, context, text)
     text1 = load_prompt("random")
-    answer = await  chat_gpt.add_message(text1)
-    await  send_text(update, context, answer)
+    try:
+        answer = await  chat_gpt.add_message(text1)
+        await  send_text(update, context, answer)
+    except NameError:
+        await send_text(update, context, "Чат GPT устал")
+    except UnicodeEncodeError:
+        await send_text(update, context, "Чат GPT устал")
     await send_text_buttons(update, context, "Рассказать еще один факт?", {
         "random_start": "Закончить",
         "random_random": "Хочу ещё факт"})
