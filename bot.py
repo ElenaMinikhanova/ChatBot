@@ -43,7 +43,6 @@ async def quiz_button_button(update, context):
 
 async def quiz_button(update, context):
     query = update.callback_query.data
-    print(query)
     if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
         await  update.callback_query.answer()
         await  send_text(update, context, "Ответь на вопрос: ")
