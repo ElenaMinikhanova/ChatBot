@@ -27,9 +27,9 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text1 = load_message("quiz")
     await send_image(update, context, "quiz")
     await send_text_buttons(update, context, text1, {
-        "quiz_1": "Тема: История",
-        "quiz_2": "Тема: Искусство",
-        "quiz_3": "Тема: Литература"})
+        "quiz_1": "Тема: История России",
+        "quiz_2": "Тема: Гарри Поттер",
+        "quiz_3": "Тема: Фильмы"})
 
 
 async def quiz_button_button(update, context):
@@ -37,13 +37,14 @@ async def quiz_button_button(update, context):
     text1 = load_message("quiz")
     await send_image(update, context, "quiz")
     await send_text_buttons(update, context, text1, {
-        "quiz_11": "Тема: История",
-        "quiz_22": "Тема: Искусство",
-        "quiz_33": "Тема: Литература"})
+        "quiz_11": "Тема: История России",
+        "quiz_22": "Тема: Гарри Поттер",
+        "quiz_33": "Тема: Фильмы"})
+
 
 async def quiz_button(update, context):
+    dialog.mode = "quiz"
     query = update.callback_query.data
-    print(query)
     if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
         await  update.callback_query.answer()
         await  send_text(update, context, "Ответь на вопрос: ")
@@ -68,6 +69,7 @@ async def quiz_button(update, context):
 
 
 async def quiz_dialog(update, context):
+    dialog.mode = "quiz"
     text = update.message.text
     answer = await  chat_gpt.add_message(text)
     await  send_text(update, context, answer)
@@ -90,12 +92,14 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def talk_dialog(update, context):
+    dialog.mode = "talk"
     text = update.message.text
     answer = await  chat_gpt.add_message(text)
     await  send_text(update, context, answer)
 
 
 async def talk_button(update, context):
+    dialog.mode = "talk"
     query = update.callback_query.data
     await  update.callback_query.answer()
 
@@ -134,11 +138,12 @@ async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_text(update, context, text)
 
 
+
 async def gpt_dialog(update, context):
+    dialog.mode = "gpt"
     text = update.message.text
-    promt = load_prompt("gpt")
-    answer = await  chat_gpt.send_question(promt, text)
-    await send_text(update, context, answer)
+    answer = await  chat_gpt.add_message(text)
+    await  send_text(update, context, answer)
 
 
 async def hello(update, context):
