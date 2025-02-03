@@ -134,9 +134,10 @@ async def random_button(update, context):
 async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "gpt"
     text = load_message('gpt')
+    prompt = load_prompt("gpt")
     await send_image(update, context, 'gpt')
     await send_text(update, context, text)
-
+    chat_gpt.set_prompt(prompt)
 
 
 async def gpt_dialog(update, context):
