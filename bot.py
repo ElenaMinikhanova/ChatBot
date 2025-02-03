@@ -4,6 +4,7 @@ from telegram.ext import ApplicationBuilder, CallbackQueryHandler, ContextTypes,
 from gpt import *
 from util import *
 from credentials import *
+import openai
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -45,38 +46,48 @@ async def quiz_button_button(update, context):
 async def quiz_button(update, context):
     dialog.mode = "quiz"
     query = update.callback_query.data
-    if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
-        await  update.callback_query.answer()
-        await  send_text(update, context, "Ответь на вопрос: ")
-        prompt = load_prompt("quiz")
-        chat_gpt.set_prompt(prompt)
-        answer = await  chat_gpt.add_message(query)
-        await  send_text(update, context, answer)
-    elif query == "quiz_11" or query == "quiz_22" or query == "quiz_33":
-        await  update.callback_query.answer()
-        await  send_text(update, context, "Ответь на вопрос: ")
-        answer = await  chat_gpt.add_message(query)
-        await  send_text(update, context, answer)
-    elif query == "quiz_more":
-        await  update.callback_query.answer()
-        await  send_text(update, context, "Ответь на вопрос: ")
-        answer = await  chat_gpt.add_message(query)
-        await  send_text(update, context, answer)
-    elif query == "quiz_new":
-        await quiz_button_button(update, context)
-    elif query == "quiz_start":
-        await start(update, context)
+    try:
+        if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
+            await  update.callback_query.answer()
+            await  send_text(update, context, "Ответь на вопрос: ")
+            prompt = load_prompt("quiz")
+            chat_gpt.set_prompt(prompt)
+            answer = await  chat_gpt.add_message(query)
+            await  send_text(update, context, answer)
+        elif query == "quiz_11" or query == "quiz_22" or query == "quiz_33":
+            await  update.callback_query.answer()
+            await  send_text(update, context, "Ответь на вопрос: ")
+            answer = await  chat_gpt.add_message(query)
+            await  send_text(update, context, answer)
+        elif query == "quiz_more":
+            await  update.callback_query.answer()
+            await  send_text(update, context, "Ответь на вопрос: ")
+            answer = await  chat_gpt.add_message(query)
+            await  send_text(update, context, answer)
+        elif query == "quiz_new":
+            await quiz_button_button(update, context)
+        elif query == "quiz_start":
+            await start(update, context)
+    except openai.AuthenticationError:
+        await  send_text(update, context, "Ошибка токена")
+    except openai.APIConnectionError:
+        await  send_text(update, context, "Нет GPT токена")
 
 
 async def quiz_dialog(update, context):
     dialog.mode = "quiz"
     text = update.message.text
-    answer = await  chat_gpt.add_message(text)
-    await  send_text(update, context, answer)
-    await send_text_buttons(update, context, "Продолжим?", {
-        "quiz_more": "Вопрос на ту же тему",
-        "quiz_new": "Выбор новой темы",
-        "quiz_start": "Выход из Квиза"})
+    try:
+        answer = await  chat_gpt.add_message(text)
+        await  send_text(update, context, answer)
+        await send_text_buttons(update, context, "Продолжим?", {
+            "quiz_more": "Вопрос на ту же тему",
+            "quiz_new": "Выбор новой темы",
+            "quiz_start": "Выход из Квиза"})
+    except openai.AuthenticationError:
+        await  send_text(update, context, "Ошибка токена")
+    except openai.APIConnectionError:
+        await  send_text(update, context, "Нет GPT токена")
 
 
 async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,20 +105,28 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def talk_dialog(update, context):
     dialog.mode = "talk"
     text = update.message.text
-    answer = await  chat_gpt.add_message(text)
-    await  send_text(update, context, answer)
+    try:
+        answer = await  chat_gpt.add_message(text)
+        await  send_text(update, context, answer)
+    except openai.AuthenticationError:
+        await  send_text(update, context, "Ошибка токена")
+    except openai.APIConnectionError:
+        await  send_text(update, context, "Нет GPT токена")
 
 
 async def talk_button(update, context):
     dialog.mode = "talk"
     query = update.callback_query.data
     await  update.callback_query.answer()
-
     await  send_image(update, context, query)
     await  send_text(update, context, "Отличный выбор! Можешь начать диалог.")
-
-    prompt = load_prompt(query)
-    chat_gpt.set_prompt(prompt)
+    try:
+        prompt = load_prompt(query)
+        chat_gpt.set_prompt(prompt)
+    except openai.AuthenticationError:
+        await  send_text(update, context, "Ошибка токена")
+    except openai.APIConnectionError:
+        await  send_text(update, context, "Нет GPT токена")
 
 
 async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -116,11 +135,16 @@ async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_image(update, context, 'random')
     await send_text(update, context, text)
     text1 = load_prompt("random")
-    answer = await  chat_gpt.add_message(text1)
-    await  send_text(update, context, answer)
-    await send_text_buttons(update, context, "Рассказать еще один факт?", {
-        "random_start": "Закончить",
-        "random_random": "Хочу ещё факт"})
+    try:
+        answer = await  chat_gpt.add_message(text1)
+        await  send_text(update, context, answer)
+        await send_text_buttons(update, context, "Рассказать еще один факт?", {
+            "random_start": "Закончить",
+            "random_random": "Хочу ещё факт"})
+    except openai.AuthenticationError:
+        await  send_text(update, context, "Ошибка токена")
+    except openai.APIConnectionError:
+        await  send_text(update, context, "Нет GPT токена")
 
 
 async def random_button(update, context):
@@ -143,8 +167,13 @@ async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def gpt_dialog(update, context):
     dialog.mode = "gpt"
     text = update.message.text
-    answer = await  chat_gpt.add_message(text)
-    await  send_text(update, context, answer)
+    try:
+        answer = await  chat_gpt.add_message(text)
+        await  send_text(update, context, answer)
+    except openai.AuthenticationError:
+        await  send_text(update, context, "Ошибка токена")
+    except openai.APIConnectionError:
+        await  send_text(update, context, "Нет GPT токена")
 
 
 async def hello(update, context):
