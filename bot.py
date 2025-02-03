@@ -88,7 +88,7 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "talk_hawking": "Стивен Хокинг",
         "talk_nietzsche": "Фридрих Ницше",
         "talk_queen": "Королева Елизавета II",
-        "talk_tolkien": "Дж.Р.Р. Толкин"})
+        "talk_tony_stark": "Тони Старк"})
 
 
 async def talk_dialog(update, context):
