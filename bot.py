@@ -5,8 +5,38 @@ from gpt import *
 from util import *
 from credentials import *
 import openai
+import  asyncio
+
+password = None
 
 
+def my_decorator(func):
+    async def wrapper(update, context):
+        try:
+            await func(update, context)
+        except openai.AuthenticationError:
+            await  send_text(update, context, "Ошибка токена")
+        except openai.APIConnectionError:
+            await  send_text(update, context, "Нет GPT токена")
+    return wrapper
+
+
+def my_decorator1(func):
+    async def wrapper1(update, context):
+        global password
+        if password=="password":
+            await func(update, context)
+        else:
+            password = update.message.text
+            await asyncio.wait_for(send_text(update, context, "Введите пароль: "), timeout=1)
+            if password=="password":
+                await send_text(update, context, "Пароль верный, можете пользоваться ботом")
+            else:
+                await send_text(update, context, "Пароль не верный, попробуйте еще раз")
+    return wrapper1
+
+
+@my_decorator1
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "main"
     text = load_message('main')
@@ -17,12 +47,55 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'random': 'Узнать случайный интересный факт 🧠',
         'gpt': 'Задать вопрос чату GPT 🤖',
         'talk': 'Поговорить с известной личностью 👤',
-        'quiz': 'Поучаствовать в квизе ❓'
+        'quiz': 'Поучаствовать в квизе ❓',
+        'translation': 'Переводчик 🌍'
         # Добавить команду в меню можно так:
         # 'command': 'button text'
     })
 
 
+@my_decorator1
+@my_decorator
+async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "random"
+    text = load_message('random')
+    await send_image(update, context, 'random')
+    await send_text(update, context, text)
+    text1 = load_prompt("random")
+    answer = await  chat_gpt.add_message(text1)
+    await  send_text(update, context, answer)
+    await send_text_buttons(update, context, "Рассказать еще один факт?", {
+        "random_start": "Закончить",
+        "random_random": "Хочу ещё факт"})
+
+
+async def random_button(update, context):
+    query = update.callback_query.data
+    if query == "random_start":
+        await start(update, context)
+    else:
+        await random(update, context)
+
+
+@my_decorator1
+async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "gpt"
+    text = load_message('gpt')
+    prompt = load_prompt("gpt")
+    await send_image(update, context, 'gpt')
+    await send_text(update, context, text)
+    chat_gpt.set_prompt(prompt)
+
+
+@my_decorator
+async def gpt_dialog(update, context):
+    dialog.mode = "gpt"
+    text = update.message.text
+    answer = await  chat_gpt.add_message(text)
+    await  send_text(update, context, answer)
+
+
+@my_decorator1
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "quiz"
     text1 = load_message("quiz")
@@ -33,63 +106,7 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quiz_3": "Тема: Фильмы"})
 
 
-async def quiz_button_button(update, context):
-    dialog.mode = "quiz"
-    text1 = load_message("quiz")
-    await send_image(update, context, "quiz")
-    await send_text_buttons(update, context, text1, {
-        "quiz_11": "Тема: История России",
-        "quiz_22": "Тема: Гарри Поттер",
-        "quiz_33": "Тема: Фильмы"})
-
-
-async def quiz_button(update, context):
-    dialog.mode = "quiz"
-    query = update.callback_query.data
-    try:
-        if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
-            await  update.callback_query.answer()
-            await  send_text(update, context, "Ответь на вопрос: ")
-            prompt = load_prompt("quiz")
-            chat_gpt.set_prompt(prompt)
-            answer = await  chat_gpt.add_message(query)
-            await  send_text(update, context, answer)
-        elif query == "quiz_11" or query == "quiz_22" or query == "quiz_33":
-            await  update.callback_query.answer()
-            await  send_text(update, context, "Ответь на вопрос: ")
-            answer = await  chat_gpt.add_message(query)
-            await  send_text(update, context, answer)
-        elif query == "quiz_more":
-            await  update.callback_query.answer()
-            await  send_text(update, context, "Ответь на вопрос: ")
-            answer = await  chat_gpt.add_message(query)
-            await  send_text(update, context, answer)
-        elif query == "quiz_new":
-            await quiz_button_button(update, context)
-        elif query == "quiz_start":
-            await start(update, context)
-    except openai.AuthenticationError:
-        await  send_text(update, context, "Ошибка токена")
-    except openai.APIConnectionError:
-        await  send_text(update, context, "Нет GPT токена")
-
-
-async def quiz_dialog(update, context):
-    dialog.mode = "quiz"
-    text = update.message.text
-    try:
-        answer = await  chat_gpt.add_message(text)
-        await  send_text(update, context, answer)
-        await send_text_buttons(update, context, "Продолжим?", {
-            "quiz_more": "Вопрос на ту же тему",
-            "quiz_new": "Выбор новой темы",
-            "quiz_start": "Выход из Квиза"})
-    except openai.AuthenticationError:
-        await  send_text(update, context, "Ошибка токена")
-    except openai.APIConnectionError:
-        await  send_text(update, context, "Нет GPT токена")
-
-
+@my_decorator1
 async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "talk"
     text = load_message("talk")
@@ -102,80 +119,95 @@ async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "talk_tony_stark": "Тони Старк"})
 
 
+@my_decorator
 async def talk_dialog(update, context):
     dialog.mode = "talk"
     text = update.message.text
-    try:
-        answer = await  chat_gpt.add_message(text)
-        await  send_text(update, context, answer)
-    except openai.AuthenticationError:
-        await  send_text(update, context, "Ошибка токена")
-    except openai.APIConnectionError:
-        await  send_text(update, context, "Нет GPT токена")
+    answer = await  chat_gpt.add_message(text)
+    await  send_text(update, context, answer)
 
 
+@my_decorator
 async def talk_button(update, context):
     dialog.mode = "talk"
     query = update.callback_query.data
     await  update.callback_query.answer()
     await  send_image(update, context, query)
     await  send_text(update, context, "Отличный выбор! Можешь начать диалог.")
-    try:
-        prompt = load_prompt(query)
-        chat_gpt.set_prompt(prompt)
-    except openai.AuthenticationError:
-        await  send_text(update, context, "Ошибка токена")
-    except openai.APIConnectionError:
-        await  send_text(update, context, "Нет GPT токена")
-
-
-async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "random"
-    text = load_message('random')
-    await send_image(update, context, 'random')
-    await send_text(update, context, text)
-    text1 = load_prompt("random")
-    try:
-        answer = await  chat_gpt.add_message(text1)
-        await  send_text(update, context, answer)
-        await send_text_buttons(update, context, "Рассказать еще один факт?", {
-            "random_start": "Закончить",
-            "random_random": "Хочу ещё факт"})
-    except openai.AuthenticationError:
-        await  send_text(update, context, "Ошибка токена")
-    except openai.APIConnectionError:
-        await  send_text(update, context, "Нет GPT токена")
-
-
-async def random_button(update, context):
-    query = update.callback_query.data
-    if query == "random_start":
-        await start(update, context)
-    else:
-        await random(update, context)
-
-
-async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "gpt"
-    text = load_message('gpt')
-    prompt = load_prompt("gpt")
-    await send_image(update, context, 'gpt')
-    await send_text(update, context, text)
+    prompt = load_prompt(query)
     chat_gpt.set_prompt(prompt)
 
 
-async def gpt_dialog(update, context):
-    dialog.mode = "gpt"
-    text = update.message.text
-    try:
-        answer = await  chat_gpt.add_message(text)
+async def quiz_button_button(update, context):
+    dialog.mode = "quiz"
+    text1 = load_message("quiz")
+    await send_image(update, context, "quiz")
+    await send_text_buttons(update, context, text1, {
+        "quiz_11": "Тема: История России",
+        "quiz_22": "Тема: Гарри Поттер",
+        "quiz_33": "Тема: Фильмы"})
+
+
+@my_decorator
+async def quiz_button(update, context):
+    dialog.mode = "quiz"
+    query = update.callback_query.data
+    if query == "quiz_1" or query == "quiz_2" or query == "quiz_3":
+        await  update.callback_query.answer()
+        await  send_text(update, context, "Ответь на вопрос: ")
+        prompt = load_prompt("quiz")
+        chat_gpt.set_prompt(prompt)
+        answer = await  chat_gpt.add_message(query)
         await  send_text(update, context, answer)
-    except openai.AuthenticationError:
-        await  send_text(update, context, "Ошибка токена")
-    except openai.APIConnectionError:
-        await  send_text(update, context, "Нет GPT токена")
+    elif query == "quiz_11" or query == "quiz_22" or query == "quiz_33":
+        await  update.callback_query.answer()
+        await  send_text(update, context, "Ответь на вопрос: ")
+        answer = await  chat_gpt.add_message(query)
+        await  send_text(update, context, answer)
+    elif query == "quiz_more":
+        await  update.callback_query.answer()
+        await  send_text(update, context, "Ответь на вопрос: ")
+        answer = await  chat_gpt.add_message(query)
+        await  send_text(update, context, answer)
+    elif query == "quiz_new":
+        await quiz_button_button(update, context)
+    elif query == "quiz_start":
+        await start(update, context)
 
 
+@my_decorator
+async def quiz_dialog(update, context):
+    dialog.mode = "quiz"
+    text = update.message.text
+    answer = await  chat_gpt.add_message(text)
+    await  send_text(update, context, answer)
+    await send_text_buttons(update, context, "Продолжим?", {
+        "quiz_more": "Вопрос на ту же тему",
+        "quiz_new": "Выбор новой темы",
+        "quiz_start": "Выход из Квиза"})
+
+
+@my_decorator1
+async def translation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "translation"
+    text1 = load_message("translation")
+    await send_image(update, context, "translation")
+    await send_text_buttons(update, context, text1, {
+        "translation_en": "Перевод с английского языка на русский",
+        "translation_ru": "Перевод с русского языка на английский"})
+
+
+@my_decorator
+async  def translation_button(update, context):
+    pass
+
+
+@my_decorator
+async  def translation_dialog(update, context):
+    pass
+
+
+@my_decorator1
 async def hello(update, context):
     if dialog.mode == "gpt":
         await gpt_dialog(update, context)
@@ -185,6 +217,8 @@ async def hello(update, context):
         await talk_dialog(update, context)
     elif dialog.mode == "quiz":
         await quiz_dialog(update, context)
+    elif dialog.mode == "translation":
+        await translation_dialog(update, context)
     else:
         await send_text(update, context, "Привет")
         await send_image(update, context, "avatar_main")
@@ -196,7 +230,7 @@ async def hello(update, context):
 async def hello_button(update, context):
     query = update.callback_query.data
     if query == "start":
-        await send_text(update, context, "Процесс запущен")
+        await start(update, context)
     else:
         await  send_text(update, context, "Процесс остановлен")
 
@@ -215,11 +249,13 @@ app.add_handler(CommandHandler("gpt", gpt))
 app.add_handler(CommandHandler("random", random))
 app.add_handler(CommandHandler("talk", talk))
 app.add_handler(CommandHandler("quiz", quiz))
+app.add_handler(CommandHandler("translation", translation))
 # Зарегистрировать обработчик коллбэка можно так:
 # app.add_handler(CallbackQueryHandler(app_button, pattern='^app_.*'))
 app.add_handler(CallbackQueryHandler(random_button, pattern="^random.*"))
 app.add_handler(CallbackQueryHandler(talk_button, pattern="^talk.*"))
 app.add_handler(CallbackQueryHandler(quiz_button, pattern="^quiz.*"))
+app.add_handler(CallbackQueryHandler(translation_button, pattern="^translation.*"))
 app.add_handler(CallbackQueryHandler(hello_button))
 app.add_handler(CallbackQueryHandler(default_callback_handler))
 app.run_polling()
