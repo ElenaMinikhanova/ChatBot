@@ -8,7 +8,7 @@ import openai
 import  asyncio
 
 password = None
-
+count = 0
 
 def my_decorator(func):
     async def wrapper(update, context):
@@ -24,15 +24,21 @@ def my_decorator(func):
 def my_decorator1(func):
     async def wrapper1(update, context):
         global password
+        global count
         if password=="password":
             await func(update, context)
         else:
             password = update.message.text
-            await asyncio.wait_for(send_text(update, context, "Введите пароль: "), timeout=1)
+            await asyncio.wait_for(send_text(update, context, "🔐"), timeout=1)
             if password=="password":
                 await send_text(update, context, "Пароль верный, можете пользоваться ботом")
+            elif count==0:
+                await send_text(update, context, "Введите пароль: ")
+                count += 1
             else:
                 await send_text(update, context, "Пароль не верный, попробуйте еще раз")
+                await send_text(update, context, "Введите пароль: ")
+                count+=1
     return wrapper1
 
 
