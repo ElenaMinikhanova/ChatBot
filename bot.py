@@ -5,7 +5,7 @@ from gpt import *
 from util import *
 from credentials import *
 import openai
-import  asyncio
+import asyncio
 
 password = None
 count = 0
@@ -205,12 +205,35 @@ async def translation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @my_decorator
 async  def translation_button(update, context):
-    pass
+    dialog.mode = "translation"
+    query = update.callback_query.data
+    if query == "translation_en":
+        prompt = load_prompt(query)
+        chat_gpt.set_prompt(prompt)
+        await  send_text(update, context, "Напиши текст на английском языке: ")
+    elif query == "translation_ru":
+        prompt = load_prompt(query)
+        chat_gpt.set_prompt(prompt)
+        await  send_text(update, context, "Напиши текст на русском языке: ")
+    elif query == "translation_no":
+        await  send_text(update, context, "Напиши новый текст: ")
+    elif query == "translation_yes":
+        await translation(update, context)
+    elif query == "translation_start":
+        await start(update, context)
 
 
 @my_decorator
 async  def translation_dialog(update, context):
-    pass
+    dialog.mode = "translation"
+    text = update.message.text
+    answer = await  chat_gpt.add_message(text)
+    await  send_text(update, context, answer)
+    await send_text_buttons(update, context, "Поменять язык перевода?", {
+        "translation_yes": "Да",
+        "translation_no": "Нет",
+        "translation_start": "Выход"
+    })
 
 
 @my_decorator1
