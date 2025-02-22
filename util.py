@@ -98,3 +98,7 @@ async def default_callback_handler(update: Update,
 
 class Dialog:
     pass
+
+
+class Password:
+    pass

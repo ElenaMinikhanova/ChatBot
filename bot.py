@@ -7,9 +7,10 @@ from credentials import *
 import openai
 import asyncio
 
-password = None
 count = 0
 
+
+# декоратор для обработки ошибок работы токена
 def my_decorator(func):
     async def wrapper(update, context):
         try:
@@ -18,30 +19,35 @@ def my_decorator(func):
             await  send_text(update, context, "Ошибка токена")
         except openai.APIConnectionError:
             await  send_text(update, context, "Нет GPT токена")
+        except openai.RateLimitError:
+            await  send_text(update, context, "Ошибка токена")
+
     return wrapper
 
 
+# декоратор создания пароля бота
 def my_decorator1(func):
     async def wrapper1(update, context):
-        global password
         global count
-        if password=="password":
+        if password.mode == "password":
             await func(update, context)
         else:
-            password = update.message.text
+            password.mode = update.message.text
             await asyncio.wait_for(send_text(update, context, "🔐"), timeout=1)
-            if password=="password":
+            if password.mode == "password":
                 await send_text(update, context, "Пароль верный, можете пользоваться ботом")
-            elif count==0:
+            elif count == 0:
                 await send_text(update, context, "Введите пароль: ")
                 count += 1
             else:
                 await send_text(update, context, "Пароль не верный, попробуйте еще раз")
                 await send_text(update, context, "Введите пароль: ")
-                count+=1
+                count += 1
+
     return wrapper1
 
 
+# главное меню бота
 @my_decorator1
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "main"
@@ -60,6 +66,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     })
 
 
+# рандомный факт от чата gpt
 @my_decorator1
 @my_decorator
 async def random(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -83,6 +90,7 @@ async def random_button(update, context):
         await random(update, context)
 
 
+# общение с чатом gpt на любую тему
 @my_decorator1
 async def gpt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "gpt"
@@ -101,6 +109,7 @@ async def gpt_dialog(update, context):
     await  send_text(update, context, answer)
 
 
+# викторина с чатом gpt
 @my_decorator1
 async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "quiz"
@@ -110,38 +119,6 @@ async def quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "quiz_1": "Тема: История России",
         "quiz_2": "Тема: Гарри Поттер",
         "quiz_3": "Тема: Фильмы"})
-
-
-@my_decorator1
-async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    dialog.mode = "talk"
-    text = load_message("talk")
-    await send_image(update, context, "talk")
-    await send_text_buttons(update, context, text, {
-        "talk_cobain": "Курт Кобейн",
-        "talk_hawking": "Стивен Хокинг",
-        "talk_nietzsche": "Фридрих Ницше",
-        "talk_queen": "Королева Елизавета II",
-        "talk_tony_stark": "Тони Старк"})
-
-
-@my_decorator
-async def talk_dialog(update, context):
-    dialog.mode = "talk"
-    text = update.message.text
-    answer = await  chat_gpt.add_message(text)
-    await  send_text(update, context, answer)
-
-
-@my_decorator
-async def talk_button(update, context):
-    dialog.mode = "talk"
-    query = update.callback_query.data
-    await  update.callback_query.answer()
-    await  send_image(update, context, query)
-    await  send_text(update, context, "Отличный выбор! Можешь начать диалог.")
-    prompt = load_prompt(query)
-    chat_gpt.set_prompt(prompt)
 
 
 async def quiz_button_button(update, context):
@@ -193,6 +170,40 @@ async def quiz_dialog(update, context):
         "quiz_start": "Выход из Квиза"})
 
 
+# общение с известной личностью
+@my_decorator1
+async def talk(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    dialog.mode = "talk"
+    text = load_message("talk")
+    await send_image(update, context, "talk")
+    await send_text_buttons(update, context, text, {
+        "talk_cobain": "Курт Кобейн",
+        "talk_hawking": "Стивен Хокинг",
+        "talk_nietzsche": "Фридрих Ницше",
+        "talk_queen": "Королева Елизавета II",
+        "talk_tony_stark": "Тони Старк"})
+
+
+@my_decorator
+async def talk_dialog(update, context):
+    dialog.mode = "talk"
+    text = update.message.text
+    answer = await  chat_gpt.add_message(text)
+    await  send_text(update, context, answer)
+
+
+@my_decorator
+async def talk_button(update, context):
+    dialog.mode = "talk"
+    query = update.callback_query.data
+    await  update.callback_query.answer()
+    await  send_image(update, context, query)
+    await  send_text(update, context, "Отличный выбор! Можешь начать диалог.")
+    prompt = load_prompt(query)
+    chat_gpt.set_prompt(prompt)
+
+
+# переводчик
 @my_decorator1
 async def translation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     dialog.mode = "translation"
@@ -204,7 +215,7 @@ async def translation(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 @my_decorator
-async  def translation_button(update, context):
+async def translation_button(update, context):
     dialog.mode = "translation"
     query = update.callback_query.data
     if query == "translation_en":
@@ -224,7 +235,7 @@ async  def translation_button(update, context):
 
 
 @my_decorator
-async  def translation_dialog(update, context):
+async def translation_dialog(update, context):
     dialog.mode = "translation"
     text = update.message.text
     answer = await  chat_gpt.add_message(text)
@@ -267,11 +278,12 @@ async def hello_button(update, context):
 dialog = Dialog()
 dialog.mode = None
 
+password = Password()
+password.mode = None
+
 chat_gpt = ChatGptService(token=ChatGPT_TOKEN)
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# Зарегистрировать обработчик команды можно так:
-# app.add_handler(CommandHandler('command', handler_func))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, hello))
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("gpt", gpt))
@@ -279,12 +291,11 @@ app.add_handler(CommandHandler("random", random))
 app.add_handler(CommandHandler("talk", talk))
 app.add_handler(CommandHandler("quiz", quiz))
 app.add_handler(CommandHandler("translation", translation))
-# Зарегистрировать обработчик коллбэка можно так:
-# app.add_handler(CallbackQueryHandler(app_button, pattern='^app_.*'))
-app.add_handler(CallbackQueryHandler(random_button, pattern="^random.*"))
-app.add_handler(CallbackQueryHandler(talk_button, pattern="^talk.*"))
-app.add_handler(CallbackQueryHandler(quiz_button, pattern="^quiz.*"))
-app.add_handler(CallbackQueryHandler(translation_button, pattern="^translation.*"))
+
+app.add_handler(CallbackQueryHandler(random_button, pattern="^random_.*"))
+app.add_handler(CallbackQueryHandler(talk_button, pattern="^talk_.*"))
+app.add_handler(CallbackQueryHandler(quiz_button, pattern="^quiz_.*"))
+app.add_handler(CallbackQueryHandler(translation_button, pattern="^translation_.*"))
 app.add_handler(CallbackQueryHandler(hello_button))
 app.add_handler(CallbackQueryHandler(default_callback_handler))
 app.run_polling()
